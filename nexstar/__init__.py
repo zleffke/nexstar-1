@@ -3,7 +3,7 @@
 # This code follows the NexStar Communication Protocol as described in NexStarCommunicationProtocolV1.2.pdf
 # This code is forked from https://github.com/sidneycadot/nexstar
 
-import sys, serial, datetime, pytz, time
+import sys, serial, datetime, pytz, time, binascii
 from enum import Enum
 
 class NexstarUsageError(Exception):
@@ -129,7 +129,7 @@ class NexstarHandController:
 
     def _write(self, *args):
         msg = NexstarHandController._to_bytes(args)
-        # print("message to be written:", msg)
+        print("message to be written:", msg, binascii.hexlify(msg))
         return self._write_binary(msg)
 
     def _read_binary(self, expected_response_length, check_and_remove_trailing_hash = True):
@@ -206,17 +206,21 @@ class NexstarHandController:
     def sync(self, firstCoordinate, secondCoordinate, highPrecisionFlag = True):
 
         # sync always works in RA/DEC coordinates
+        print("Reading this one!")
 
         if highPrecisionFlag:
             command = NexstarCommand.SYNC_PRECISE
             firstCoordinate  = round(float(firstCoordinate)  / 360.0 * 0x100000000)
             secondCoordinate = round(float(secondCoordinate) / 360.0 * 0x100000000)
-            coordinates = "{}{:08x},{:08x}".format(firstCoordinate, secondCoordinate)
+            #coordinates = "{}{:08x},{:08x}".format(firstCoordinate, secondCoordinate)
+            print("{:08x},{:08x}".format(firstCoordinate, secondCoordinate))
+            coordinates = "{:08x},{:08x}".format(firstCoordinate, secondCoordinate)
         else:
             command = NexstarCommand.SYNC
             firstCoordinate  = round(float(firstCoordinate)  / 360.0 * 0x10000)
             secondCoordinate = round(float(secondCoordinate) / 360.0 * 0x10000)
-            coordinates = "{}{:04x},{:04x}".format(firstCoordinate, secondCoordinate)
+            #coordinates = "{}{:04x},{:04x}".format(firstCoordinate, secondCoordinate)
+            coordinates = "{:04x},{:04x}".format(firstCoordinate, secondCoordinate)
 
         self._write(command, coordinates)
 
@@ -368,7 +372,11 @@ class NexstarHandController:
         if zone < 0:
             zone += 256
 
-        request = [NexStarCommand.SET_TIME, hour, minute, second, month, day, year, zone, dst]
+        print(year, month, day, hour, minute, second, zone, dst)
+
+        request = [NexstarCommand.SET_TIME, hour, minute, second, month, day, year, zone, dst]
+        #request = [NexstarCommand.SET_TIME, chr(hour), chr(minute), chr(second), chr(month), chr(day), chr(year), chr(zone), chr(dst)]
+        print(request)
         self._write(request)
 
         # Response is a single hash ('#') character. Drop it.
